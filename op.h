@@ -38,6 +38,10 @@ struct frame_base {
 	virtual void assign(frame_base *o) { 
 		std::cout << "frame_base::assign()" << std::endl;
 	}
+
+	virtual void plus(frame_base *o, frame_base *res) {
+		std::cout << "frame_base::plus()" << std::endl;
+	}
 };
 
 
@@ -64,6 +68,14 @@ struct frame : frame_base {
 		if (0 == co) throw std::runtime_error("type mismatch");
 		t = co->t;
 	}
+
+	virtual void plus(frame_base *o, frame_base *res) {
+		frame<T> *co = dynamic_cast<frame<T> *>(o);
+		frame<T> *cres = dynamic_cast<frame<T> *>(res);
+
+		if (0 == co || 0 == cres) throw std::runtime_error("type mismatch");
+		cres->t = t + co->t;
+	}
 };
 
 template<class T>
@@ -81,8 +93,8 @@ template<class T>
 inline void var(frame<T> f, op *o);
 
 inline void print(frame_base &f, int sp, op *o);
-
 inline void assign(frame_base &f, int sp1, int sp2, op *o);
+inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o);
 
 struct op {
 	code_vector code;
@@ -169,13 +181,25 @@ struct op {
 				c.push_back(f); 
 			}
 
-			/*
-			if (token == "-") {
+			if (token == "+") {
+				std::string ssp1, ssp2, ssp3;
+				str >> ssp1 >> ssp2 >> ssp3;
+
 				int sp1, sp2, sp3;
-				std::stringstream refstr(v.substr(1));
-				refstr >> sp1 >> sp2 >> sp3;
+				std::stringstream refstr1(ssp1.substr(1));
+				refstr1 >> sp1;
+
+				std::stringstream refstr2(ssp2.substr(1));
+				refstr2 >> sp2;
+
+				std::stringstream refstr3(ssp3.substr(1));
+				refstr3 >> sp3;
+
+				boost::function<void(frame_base&)> f = 
+					boost::bind(&plus, _1, sp1, sp2, sp3, &o);
+
+				c.push_back(f); 
 			}
-			*/
 		}
 		std::cout << "size: " << c.size() << std::endl;
 
@@ -193,6 +217,27 @@ struct op {
 		}
 	}
 };
+
+// get the sp-th frame from the top of the stack
+frame_base *get(frame_base *top, int sp) {
+	while(0 != sp) {
+		top = top->p;
+		--sp;
+	}
+	return top;
+}
+
+inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o) {
+	++(o->ip);
+
+	frame_base *c1, *c2, *c3;
+
+	c1 = get(&f, sp1);
+	c2 = get(&f, sp2);
+	c3 = get(&f, sp3);
+
+	c2->plus(c3, c1);
+}
 
 
 inline void assign(frame_base &f, int sp1, int sp2, op *o) {

@@ -4,16 +4,16 @@ int 5
 int 8
 double 6.3
 
-# do some stuff
+# do some stuff. $N is the N-th element from the top of the stack
 = $2 $1
 
-# this would throw an exception
+# this would throw an exception as $0 is a double and $1 is an int
 # = $0 $1
 
 
-- $2 $2 $3
++ $2 $2 $3
 
-# print results $N is the N-th element from the top of the stack
+# print results 
 print $0
 print $1
 print $2
