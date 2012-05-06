@@ -11,26 +11,37 @@
 
 namespace op {
 
-typedef double number;
+struct frame_base;
+
+typedef std::vector<std::string> string_vector;
+typedef std::vector<boost::function<void(frame_base&)> > code_vector;
+
 
 struct frame_base {
-	frame_base(frame_base *p) : p(p) { }
+	frame_base(frame_base *p, code_vector::const_iterator ip) 
+	: 
+		p(p), ip(ip) 
+	{ }
+
 	frame_base *p;
+	code_vector::const_iterator ip;
 };
+
+
 
 template<class T>
 struct frame : frame_base {
-	frame(const T& t = T(), frame_base *p = 0) 
+	frame(const T& t, frame_base *p, code_vector::const_iterator ip) 
 	: 
-		t(t), frame_base(p) 
+		t(t), frame_base(p, ip) 
 	{ }
 
 	T t;
 };
 
 template<class T>
-frame<T> make_frame(T t, frame_base *p) {
-	frame<T> f(t,p);
+frame<T> make_frame(T t, frame_base &p, code_vector::const_iterator ip) {
+	frame<T> f(t, &p, ip);
 	return f;
 }
 
@@ -43,8 +54,6 @@ template<class T>
 inline void var(frame<T> f, op *o);
 
 struct op {
-	typedef std::vector<std::string> string_vector;
-	typedef std::vector<boost::function<void(void)> > code_vector;
 	code_vector code;
 	
 	// the "instruction pointer"
@@ -53,14 +62,14 @@ struct op {
 	frame<int> f;
 
 	op() :
-		f(0, 0)
+		f(0, 0, code.begin())
 	{
 
 	}
 
 	int run(const code_vector &c) {
 		std::cout << "run(const code_vector &c) " << std::endl;
-		f = frame<int>(0,0);
+		f = frame<int>(0, 0, c.begin());
 		code = c;
 		ip = code.begin();
 		run(f);
@@ -81,14 +90,19 @@ struct op {
 			if (token == "int") {
 				int v;
 				str >> v;
-				boost::function<void(void)> f = boost::bind(&var<int>, make_frame(v,0),  &o);
+				//boost::function<void(frame_base)> f1 = boost::bind(make_frame<int>, v, _1, o.f.ip);
+				
+				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
 				c.push_back(f); 
 			}
 
 			if (token == "double") {
 				double v;
 				str >> v;
-				boost::function<void(void)> f = boost::bind(&var<double>, make_frame(v,0),  &o);
+				// boost::function<void(frame_base)> f1 = boost::bind(make_frame<double>, v, _1, o.f.ip);
+
+				//boost::function<void(frame_base)> f = boost::bind(&var<double>, make_frame(v, &o.f, o.f.ip),  &o);
+				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
 				c.push_back(f); 
 			}
 		}
@@ -102,7 +116,8 @@ struct op {
 		std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
 		if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
-		(*ip)();
+		// Execute code at ip
+		(*ip)(f);
 	}
 };
 
