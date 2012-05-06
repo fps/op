@@ -203,8 +203,7 @@ struct op {
 		}
 		// std::cout << "size: " << c.size() << std::endl;
 
-		o.run(c);
-		return o.f.t;
+		return o.run(c);
 	}
 
 	void run(frame_base &f) {

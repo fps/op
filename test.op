@@ -1,5 +1,5 @@
 # push some variables on the stack
-int 4
+int -4
 int 5
 int 8
 double 6.3
