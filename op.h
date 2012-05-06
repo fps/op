@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <stdexcept>
 #include <sstream>
 
 namespace op {
@@ -31,7 +32,11 @@ struct frame_base {
 	virtual ~frame_base() { }
 
 	virtual void print() { 
-		std::cout << "why would i get called?" << std::endl; 
+		std::cout << "frame_base::print()" << std::endl; 
+	}
+
+	virtual void assign(frame_base *o) { 
+		std::cout << "frame_base::assign()" << std::endl;
 	}
 };
 
@@ -50,6 +55,14 @@ struct frame : frame_base {
 
 	virtual void print() {
 		std::cout << "frame<T>::print() " << t << std::endl;
+	}
+
+	virtual void assign(frame_base *o) {
+		std::cout << "frame<T>::assign()" << std::endl;
+		frame<T> *co = dynamic_cast<frame<T> *>(o);
+
+		if (0 == co) throw std::runtime_error("type mismatch");
+		t = co->t;
 	}
 };
 
@@ -147,10 +160,13 @@ struct op {
 				std::stringstream refstr1(ssp1.substr(1));
 				refstr1 >> sp1;
 
-				std::stringstream refstr2(ssp1.substr(1));
+				std::stringstream refstr2(ssp2.substr(1));
 				refstr2 >> sp2;
 
-				
+				boost::function<void(frame_base&)> f = 
+					boost::bind(&assign, _1, sp1, sp2, &o);
+
+				c.push_back(f); 
 			}
 
 			/*
@@ -182,7 +198,21 @@ struct op {
 inline void assign(frame_base &f, int sp1, int sp2, op *o) {
 	++(o->ip);
 
-	
+	frame_base *c1 = &f;
+	while(0 != sp1) {
+		//std::cout << "sp: " << sp << std::endl;
+		c1 = c1->p;
+		--sp1;	
+	}
+
+	frame_base *c2 = &f;
+	while(0 != sp2) {
+		//std::cout << "sp: " << sp << std::endl;
+		c2 = c2->p;
+		--sp2;	
+	}
+
+	c1->assign(c2);	
 }
 
 

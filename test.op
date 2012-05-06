@@ -6,10 +6,16 @@ double 6.3
 
 # do some stuff
 = $2 $1
+
+# this would throw an exception
+# = $0 $1
+
+
 - $2 $2 $3
 
 # print results $N is the N-th element from the top of the stack
 print $0
+print $1
 print $2
 print $3
 
