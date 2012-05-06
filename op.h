@@ -21,10 +21,16 @@ struct frame_base {
 	frame_base(frame_base *p, code_vector::const_iterator ip) 
 	: 
 		p(p), ip(ip) 
-	{ }
+	{
+		std::cout << "frame_base()" << std::endl;
+	}
 
 	frame_base *p;
 	code_vector::const_iterator ip;
+
+	virtual ~frame_base() { }
+
+	virtual void print() { std::cout << "why would i get called?" << std::endl; }
 };
 
 
@@ -34,9 +40,15 @@ struct frame : frame_base {
 	frame(const T& t, frame_base *p, code_vector::const_iterator ip) 
 	: 
 		t(t), frame_base(p, ip) 
-	{ }
+	{
+		std::cout << "frame()" << std::endl;
+	}
 
 	T t;
+
+	virtual void print() {
+		std::cout << "frame<T>::print() " << t << std::endl;
+	}
 };
 
 template<class T>
@@ -52,6 +64,9 @@ inline void func(frame<T> f, op *o);
 
 template<class T>
 inline void var(frame<T> f, op *o);
+
+template<class T>
+inline void print(frame_base &f, int sp, op *o);
 
 struct op {
 	code_vector code;
@@ -91,7 +106,9 @@ struct op {
 				int v;
 				str >> v;
 				
-				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+				boost::function<void(frame_base&)> f = 
+					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+
 				c.push_back(f); 
 			}
 
@@ -99,9 +116,26 @@ struct op {
 				double v;
 				str >> v;
 
-				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+				boost::function<void(frame_base&)> f = 
+					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+
 				c.push_back(f); 
 			}
+
+			if (token == "print") {
+				std::string v;
+				str >> v;
+
+				int sp;
+				std::stringstream refstr(v.substr(1));
+				refstr >> sp;
+
+				boost::function<void(frame_base&)> f = 
+					boost::bind(&print<int>, _1, sp, &o);
+
+				c.push_back(f); 
+			}
+			
 		}
 		std::cout << "size: " << c.size() << std::endl;
 
@@ -111,18 +145,36 @@ struct op {
 
 	void run(frame_base &f) {
 		std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
-		if (code.end() == ip) { std::cout << "done" << std::endl; return; }
+		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
-		// Execute code at ip
-		(*ip)(f);
+		while(code.end() != ip) {
+			// Execute code at ip
+			(*ip)(f);
+		}
 	}
 };
 
 template<class T>
-inline void var(frame<T> f, op *o) {
-	std::cout << "var(frame<T> f, op *o) " << f.t << std::endl;
-	// bump instruction pointer
+inline void print(frame_base &f, int sp, op *o) {
 	++(o->ip);
+
+	frame_base *c = &f;
+	while(0 != sp) {
+		std::cout << "sp: " << sp << std::endl;
+		c = c->p;
+		--sp;	
+	}
+	c->print();
+	//frame<T> *ff = dynamic_cast<frame<T>* >(c);
+	//std::cout << "casted" << std::endl;
+	//std::cout << "print: " << ff->t << std::endl;
+}
+
+template<class T>
+inline void var(frame<T> f, op *o) {
+	++(o->ip);
+
+	std::cout << "var(frame<T> f, op *o) " << f.t << std::endl;
 
 	// call back to the executor
 	o->run(f);
