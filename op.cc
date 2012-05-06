@@ -6,8 +6,11 @@
 #include <vector>
 
 int main(int argc, char *argv[]) {
+	if (argc < 2) { std::cout << "usage op [file.op]" << std::endl; exit(1); }
+
 	std::ifstream f(argv[1]);
 	std::vector<std::string> code;
+
 	while(f.good()) {
 		std::string line;
 		std::getline(f, line);
@@ -21,6 +24,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// std::cout << "run: " << code.size() << std::endl;
-	op::op::run(code);
+	op::op op = op::op::compile(code);
+	op.run();
 }

@@ -18,3 +18,12 @@ print $1
 print $2
 print $3
 
+# define a function
+<<<
++ $1 $2 $3
+>>>
+
+print $3
+
+# call function which is the topmost element on the stack
+do $0

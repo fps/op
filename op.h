@@ -112,13 +112,13 @@ struct op {
 
 	}
 
-	int run(const code_vector &c) {
+	int run() {
 		struct timeval tv1;
 		gettimeofday(&tv1, 0);
 
 		// std::cout << "run(const code_vector &c) " << std::endl;
-		f = frame<int>(0, 0, c.begin());
-		code = c;
+		f = frame<int>(0, 0, code.begin());
+		code;
 		ip = code.begin();
 		run(f);
 
@@ -133,7 +133,7 @@ struct op {
 		return f.t;
 	}
 
-	static int run(const string_vector &s) {
+	static op compile(const string_vector &s) {
 		op o;
 		// parse and build intermediate representation
 		code_vector c;
@@ -143,6 +143,19 @@ struct op {
 			std::stringstream str(*it);
 			std::string token;
 			str >> token;
+
+			if (token == "<<<") {
+				// remember ip
+
+				// read until >>> and continue execution there
+				for (string_vector::const_iterator it2 = ++it; ; ++it2) {
+					std::stringstream str(*it2);
+					std::string token;
+					str >> token;
+					if (token == ">>>") break;
+					std::cout << "fun: " << token << std::endl;
+				}
+			}
 
 			if (token == "int") {
 				int v;
@@ -216,8 +229,9 @@ struct op {
 			}
 		}
 		// std::cout << "size: " << c.size() << std::endl;
+		o.code = c;
+		return o;
 
-		return o.run(c);
 	}
 
 	void run(frame_base &f) {
