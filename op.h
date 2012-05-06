@@ -90,7 +90,6 @@ struct op {
 			if (token == "int") {
 				int v;
 				str >> v;
-				//boost::function<void(frame_base)> f1 = boost::bind(make_frame<int>, v, _1, o.f.ip);
 				
 				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
 				c.push_back(f); 
@@ -99,9 +98,7 @@ struct op {
 			if (token == "double") {
 				double v;
 				str >> v;
-				// boost::function<void(frame_base)> f1 = boost::bind(make_frame<double>, v, _1, o.f.ip);
 
-				//boost::function<void(frame_base)> f = boost::bind(&var<double>, make_frame(v, &o.f, o.f.ip),  &o);
 				boost::function<void(frame_base)> f = boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
 				c.push_back(f); 
 			}
