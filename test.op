@@ -10,7 +10,6 @@ double 6.3
 # this would throw an exception as $0 is a double and $1 is an int
 # = $0 $1
 
-
 + $2 $2 $3
 
 # print results 

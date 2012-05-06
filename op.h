@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <sys/time.h>
+
 namespace op {
 
 struct frame_base;
@@ -111,11 +113,23 @@ struct op {
 	}
 
 	int run(const code_vector &c) {
+		struct timeval tv1;
+		gettimeofday(&tv1, 0);
+
 		// std::cout << "run(const code_vector &c) " << std::endl;
 		f = frame<int>(0, 0, c.begin());
 		code = c;
 		ip = code.begin();
 		run(f);
+
+		struct timeval tv2;
+		gettimeofday(&tv2, 0);
+		std::cout 
+			<< "time(ms): " 
+			<< ((double)tv2.tv_sec * 1000.0 + (double)tv2.tv_usec/1000.0) 
+				- ((double)tv1.tv_sec * 1000.0 + (double)tv1.tv_usec/1000.0) 
+			<< std::endl;
+
 		return f.t;
 	}
 
