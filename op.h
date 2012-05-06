@@ -3,7 +3,11 @@
 
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+
 #include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
 
 namespace op {
 
@@ -16,7 +20,10 @@ struct frame_base {
 
 template<class T>
 struct frame : frame_base {
-	frame(const T& t = T(), frame_base *p = 0) : frame_base(p) { }
+	frame(const T& t = T(), frame_base *p = 0) 
+	: 
+		t(t), frame_base(p) 
+	{ }
 
 	T t;
 };
@@ -36,52 +43,76 @@ template<class T>
 inline void var(frame<T> f, op *o);
 
 struct op {
-	op() : ip(0) {
+	typedef std::vector<std::string> string_vector;
+	typedef std::vector<boost::function<void(void)> > code_vector;
+	code_vector code;
+	
+	// the "instruction pointer"
+	code_vector::const_iterator ip;
 
-		frame<int> f;
-		f.t = 0;
+	frame<int> f;
 
-		run(f);
+	op() :
+		f(0, 0)
+	{
+
 	}
 
-	int ip;
+	int run(const code_vector &c) {
+		std::cout << "run(const code_vector &c) " << std::endl;
+		f = frame<int>(0,0);
+		code = c;
+		ip = code.begin();
+		run(f);
+		return f.t;
+	}
 
-	void run(frame_base &f) {
-		while(true) {
-			++ip;
-			std::cout << "ip: " << ip << std::endl;
-			switch(ip) {
-				case 0:
-					var(make_frame(0, &f), this);
-				break;
+	static int run(const string_vector &s) {
+		op o;
+		// parse and build intermediate representation
+		code_vector c;
 
-				case 1:
-					var(make_frame(0.0d, &f), this);
-				break;
+		for (string_vector::const_iterator it = s.begin(); it != s.end(); ++it) {
+			std::cout << "--- " << *it << std::endl;
+			std::stringstream str(*it);
+			std::string token;
+			str >> token;
 
-				case 2: {
-					// function definition
-					boost::function<void(void)> fn = 
-						boost::bind(&op::run, this, f);
+			if (token == "int") {
+				int v;
+				str >> v;
+				boost::function<void(void)> f = boost::bind(&var<int>, make_frame(v,0),  &o);
+				c.push_back(f); 
+			}
 
-					var(make_frame(fn, &f), this);
-				}
-				break;
-
-				case 100:
-					--ip; 
-					return;
-				break;
-
-				default: break;
+			if (token == "double") {
+				double v;
+				str >> v;
+				boost::function<void(void)> f = boost::bind(&var<double>, make_frame(v,0),  &o);
+				c.push_back(f); 
 			}
 		}
+		std::cout << "size: " << c.size() << std::endl;
 
+		o.run(c);
+		return o.f.t;
+	}
+
+	void run(frame_base &f) {
+		std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
+		if (code.end() == ip) { std::cout << "done" << std::endl; return; }
+
+		(*ip)();
 	}
 };
 
 template<class T>
 inline void var(frame<T> f, op *o) {
+	std::cout << "var(frame<T> f, op *o) " << f.t << std::endl;
+	// bump instruction pointer
+	++(o->ip);
+
+	// call back to the executor
 	o->run(f);
 }
 
