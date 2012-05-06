@@ -62,7 +62,7 @@ struct frame : frame_base {
 	}
 
 	virtual void assign(frame_base *o) {
-		std::cout << "frame<T>::assign()" << std::endl;
+		// std::cout << "frame<T>::assign()" << std::endl;
 		frame<T> *co = dynamic_cast<frame<T> *>(o);
 
 		if (0 == co) throw std::runtime_error("type mismatch");
@@ -111,7 +111,7 @@ struct op {
 	}
 
 	int run(const code_vector &c) {
-		std::cout << "run(const code_vector &c) " << std::endl;
+		// std::cout << "run(const code_vector &c) " << std::endl;
 		f = frame<int>(0, 0, c.begin());
 		code = c;
 		ip = code.begin();
@@ -125,7 +125,7 @@ struct op {
 		code_vector c;
 
 		for (string_vector::const_iterator it = s.begin(); it != s.end(); ++it) {
-			std::cout << "--- " << *it << std::endl;
+			// std::cout << "--- " << *it << std::endl;
 			std::stringstream str(*it);
 			std::string token;
 			str >> token;
@@ -201,14 +201,14 @@ struct op {
 				c.push_back(f); 
 			}
 		}
-		std::cout << "size: " << c.size() << std::endl;
+		// std::cout << "size: " << c.size() << std::endl;
 
 		o.run(c);
 		return o.f.t;
 	}
 
 	void run(frame_base &f) {
-		std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
+		// std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
 		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
 		while(code.end() != ip) {
@@ -230,59 +230,27 @@ frame_base *get(frame_base *top, int sp) {
 inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o) {
 	++(o->ip);
 
-	frame_base *c1, *c2, *c3;
-
-	c1 = get(&f, sp1);
-	c2 = get(&f, sp2);
-	c3 = get(&f, sp3);
-
-	c2->plus(c3, c1);
+	get(&f, sp2)->plus(get(&f, sp3), get(&f, sp1));
 }
 
 
 inline void assign(frame_base &f, int sp1, int sp2, op *o) {
 	++(o->ip);
-
-	frame_base *c1 = &f;
-	while(0 != sp1) {
-		//std::cout << "sp: " << sp << std::endl;
-		c1 = c1->p;
-		--sp1;	
-	}
-
-	frame_base *c2 = &f;
-	while(0 != sp2) {
-		//std::cout << "sp: " << sp << std::endl;
-		c2 = c2->p;
-		--sp2;	
-	}
-
-	c1->assign(c2);	
+	
+	get(&f, sp1)->assign(get(&f, sp2));
 }
 
 
 inline void print(frame_base &f, int sp, op *o) {
 	++(o->ip);
 
-	frame_base *c = &f;
-	while(0 != sp) {
-		//std::cout << "sp: " << sp << std::endl;
-		c = c->p;
-		--sp;	
-	}
-	c->print();
-	//frame<T> *ff = dynamic_cast<frame<T>* >(c);
-	//std::cout << "casted" << std::endl;
-	//std::cout << "print: " << ff->t << std::endl;
+	get(&f, sp)->print();
 }
 
 template<class T>
 inline void var(frame<T> f, op *o) {
 	++(o->ip);
 
-	std::cout << "var(frame<T> f, op *o) " << f.t << std::endl;
-
-	// call back to the executor
 	o->run(f);
 }
 
