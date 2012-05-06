@@ -22,7 +22,7 @@ struct frame_base {
 	: 
 		p(p), ip(ip) 
 	{
-		std::cout << "frame_base()" << std::endl;
+		//std::cout << "frame_base()" << std::endl;
 	}
 
 	frame_base *p;
@@ -30,7 +30,9 @@ struct frame_base {
 
 	virtual ~frame_base() { }
 
-	virtual void print() { std::cout << "why would i get called?" << std::endl; }
+	virtual void print() { 
+		std::cout << "why would i get called?" << std::endl; 
+	}
 };
 
 
@@ -41,7 +43,7 @@ struct frame : frame_base {
 	: 
 		t(t), frame_base(p, ip) 
 	{
-		std::cout << "frame()" << std::endl;
+		//std::cout << "frame()" << std::endl;
 	}
 
 	T t;
@@ -65,8 +67,9 @@ inline void func(frame<T> f, op *o);
 template<class T>
 inline void var(frame<T> f, op *o);
 
-template<class T>
 inline void print(frame_base &f, int sp, op *o);
+
+inline void assign(frame_base &f, int sp1, int sp2, op *o);
 
 struct op {
 	code_vector code;
@@ -117,7 +120,7 @@ struct op {
 				str >> v;
 
 				boost::function<void(frame_base&)> f = 
-					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+					boost::bind(&var<double>, boost::bind(&make_frame<double>, v, _1, o.f.ip),  &o);
 
 				c.push_back(f); 
 			}
@@ -131,11 +134,32 @@ struct op {
 				refstr >> sp;
 
 				boost::function<void(frame_base&)> f = 
-					boost::bind(&print<int>, _1, sp, &o);
+					boost::bind(&print, _1, sp, &o);
 
 				c.push_back(f); 
 			}
-			
+
+			if (token == "=") {
+				std::string ssp1, ssp2;
+				str >> ssp1 >> ssp2;
+
+				int sp1, sp2;
+				std::stringstream refstr1(ssp1.substr(1));
+				refstr1 >> sp1;
+
+				std::stringstream refstr2(ssp1.substr(1));
+				refstr2 >> sp2;
+
+				
+			}
+
+			/*
+			if (token == "-") {
+				int sp1, sp2, sp3;
+				std::stringstream refstr(v.substr(1));
+				refstr >> sp1 >> sp2 >> sp3;
+			}
+			*/
 		}
 		std::cout << "size: " << c.size() << std::endl;
 
@@ -154,13 +178,20 @@ struct op {
 	}
 };
 
-template<class T>
+
+inline void assign(frame_base &f, int sp1, int sp2, op *o) {
+	++(o->ip);
+
+	
+}
+
+
 inline void print(frame_base &f, int sp, op *o) {
 	++(o->ip);
 
 	frame_base *c = &f;
 	while(0 != sp) {
-		std::cout << "sp: " << sp << std::endl;
+		//std::cout << "sp: " << sp << std::endl;
 		c = c->p;
 		--sp;	
 	}
