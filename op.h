@@ -248,6 +248,17 @@ struct op {
 				++ips_in_compile;
 			}
 
+			if (token == "bool") {
+				bool v;
+				str >> v;
+				
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&var<bool>, boost::bind(&make_frame<bool>, v, _1),  _2);
+
+				c.push_back(f); 
+				++ips_in_compile;
+			}
+
 			if (token == "double") {
 				double v;
 				str >> v;
