@@ -134,6 +134,7 @@ inline void print(frame_base &f, int sp, op *o);
 inline void assign(frame_base &f, int sp1, int sp2, op *o);
 inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o);
 inline void call(frame_base &f, int sp1, op *o);
+inline void iff(frame_base &f, int sp1, int sp2, int sp3, op *o);
 inline void alter_ip(frame_base &f, int sp1, op *o);
 
 struct op {
@@ -220,6 +221,28 @@ struct op {
 
 				c.insert(c.begin() + ips_function_start, f);
 				++(++ips_in_compile);
+			}
+
+			if (token == "if") {
+				std::string v1, v2, v3;
+				str >> v1 >> v2 >> v3;
+
+				int sp1, sp2, sp3;
+
+				std::stringstream refstr1(v1.substr(1));
+				refstr1 >> sp1;
+
+				std::stringstream refstr2(v2.substr(1));
+				refstr2 >> sp2;
+
+				std::stringstream refstr3(v3.substr(1));
+				refstr3 >> sp3;
+
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&iff, _1, sp1, sp2, sp3,_2);
+
+				c.push_back(f);
+				++ips_in_compile;		
 			}
 
 			if (token == "call") {
@@ -356,6 +379,11 @@ frame_base *get(frame_base *top, int sp) {
 inline void alter_ip(frame_base &f, int sp1, op *o) {
 	o->ip += sp1;
 	OP_DBG("alter_ip: " << sp1 )
+}
+
+
+inline void iff(frame_base &f, int sp1, int sp2, int sp3, op *o) {
+
 }
 
 inline void call(frame_base &f, int sp1, op *o) {
