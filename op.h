@@ -1,6 +1,7 @@
 #ifndef OP_OP_H
 #define OP_OP_H
 
+#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
@@ -16,33 +17,42 @@ namespace op {
 
 struct frame_base;
 
+struct op;
+
 typedef std::vector<std::string> string_vector;
-typedef std::vector<boost::function<void(frame_base&)> > code_vector;
+typedef std::vector<boost::function2<void, frame_base&, op*> > code_vector;
+typedef std::pair<code_vector::const_iterator, code_vector::const_iterator> function;
 
 
 struct frame_base {
-	frame_base(frame_base *p, code_vector::const_iterator ip) 
+	frame_base(frame_base *p) 
 	: 
-		p(p), ip(ip) 
+		p(p)
 	{
 		//std::cout << "frame_base()" << std::endl;
 	}
 
 	frame_base *p;
-	code_vector::const_iterator ip;
 
 	virtual ~frame_base() { }
 
 	virtual void print() { 
 		std::cout << "frame_base::print()" << std::endl; 
+		throw std::runtime_error("!!!!!");
 	}
 
 	virtual void assign(frame_base *o) { 
 		std::cout << "frame_base::assign()" << std::endl;
+		throw std::runtime_error("!!!!!");
 	}
 
 	virtual void plus(frame_base *o, frame_base *res) {
 		std::cout << "frame_base::plus()" << std::endl;
+		throw std::runtime_error("!!!!!");
+	}
+
+	virtual void operator()() {
+		throw std::runtime_error("!!!!!");
 	}
 };
 
@@ -50,9 +60,9 @@ struct frame_base {
 
 template<class T>
 struct frame : frame_base {
-	frame(const T& t, frame_base *p, code_vector::const_iterator ip) 
+	frame(const T& t, frame_base *p) 
 	: 
-		t(t), frame_base(p, ip) 
+		frame_base(p) , t(t)
 	{
 		//std::cout << "frame()" << std::endl;
 	}
@@ -78,18 +88,36 @@ struct frame : frame_base {
 		if (0 == co || 0 == cres) throw std::runtime_error("type mismatch");
 		cres->t = t + co->t;
 	}
+
+	virtual void operator()() {
+		throw std::runtime_error("not a function");
+	}
 };
 
+template<>
+void frame<function>::print() {
+		throw std::runtime_error("SAY WHAT!!!!!");
+}
+template<>
+void frame<function>::plus(frame_base *o, frame_base *res) {
+
+}
+
+template<>
+void frame<boost::function<void(void)> >::operator()() {
+	t();
+}
+
 template<class T>
-frame<T> make_frame(T t, frame_base &p, code_vector::const_iterator ip) {
-	frame<T> f(t, &p, ip);
+frame<T> make_frame(T t, frame_base &p) {
+	frame<T> f(t, &p);
 	return f;
 }
 
 struct op;
 
 template<class T>
-inline void func(frame<T> f, op *o);
+inline void func(frame_base &f, op *o);
 
 template<class T>
 inline void var(frame<T> f, op *o);
@@ -97,17 +125,19 @@ inline void var(frame<T> f, op *o);
 inline void print(frame_base &f, int sp, op *o);
 inline void assign(frame_base &f, int sp1, int sp2, op *o);
 inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o);
+inline void call(frame_base &f, int sp1, op *o);
+inline void alter_ip(frame_base &f, int sp1, op *o);
 
 struct op {
-	code_vector code;
-	
+	boost::shared_ptr<code_vector> code;
+
 	// the "instruction pointer"
 	code_vector::const_iterator ip;
 
 	frame<int> f;
 
 	op() :
-		f(0, 0, code.begin())
+		f(0, 0)
 	{
 
 	}
@@ -117,10 +147,9 @@ struct op {
 		gettimeofday(&tv1, 0);
 
 		// std::cout << "run(const code_vector &c) " << std::endl;
-		f = frame<int>(0, 0, code.begin());
-		code;
-		ip = code.begin();
-		run(f);
+		f = frame<int>(0, 0);
+		ip = code->begin();
+		run(f, code->end());
 
 		struct timeval tv2;
 		gettimeofday(&tv2, 0);
@@ -136,7 +165,12 @@ struct op {
 	static op compile(const string_vector &s) {
 		op o;
 		// parse and build intermediate representation
-		code_vector c;
+		o.code = boost::shared_ptr<code_vector>(new code_vector());
+
+		code_vector &c = *(o.code);
+
+		bool in_function = false;
+		int ips_in_function = 0;
 
 		for (string_vector::const_iterator it = s.begin(); it != s.end(); ++it) {
 			// std::cout << "--- " << *it << std::endl;
@@ -145,24 +179,61 @@ struct op {
 			str >> token;
 
 			if (token == "<<<") {
-				// remember ip
+				in_function = true;			
+				ips_in_function = 0;				
+				std::cout << token << std::endl;
+			}
 
-				// read until >>> and continue execution there
-				for (string_vector::const_iterator it2 = ++it; ; ++it2) {
-					std::stringstream str(*it2);
-					std::string token;
-					str >> token;
-					if (token == ">>>") break;
-					std::cout << "fun: " << token << std::endl;
-				}
+			if (token == ">>>") {
+				std::cout << token << " " << ips_in_function << std::endl;
+				in_function = false;
+				--ips_in_function;						
+
+				function fn = std::make_pair((c.end() + 2) - ips_in_function, c.end() + 2);
+
+				std::cout << c.end() - fn.first << " " << c.end() - fn.second << std::endl;
+
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(
+						&var<function>, 
+						boost::bind(
+							&make_frame<function>, 
+							fn, 
+							_1
+						),  
+					_2);
+//					boost::bind(&call, _1, 0, &o);
+
+				c.insert((c.end() - (ips_in_function)), f);
+
+				boost::function<void(frame_base&,op*)> f2 = 
+					boost::bind(&alter_ip, _1, ips_in_function + 1, _2); 
+
+				c.insert((c.end() - (ips_in_function)), f2);
+
+				std::cout << c.end() - fn.first << " " << c.end() - fn.second << std::endl;
+			}
+
+			if (token == "call") {
+				std::string v;
+				str >> v;
+
+				int sp1;
+				std::stringstream refstr(v.substr(1));
+				refstr >> sp1;
+
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&call, _1, sp1, _2);
+
+				c.push_back(f);				
 			}
 
 			if (token == "int") {
 				int v;
 				str >> v;
 				
-				boost::function<void(frame_base&)> f = 
-					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1, o.f.ip),  &o);
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1),  _2);
 
 				c.push_back(f); 
 			}
@@ -171,8 +242,8 @@ struct op {
 				double v;
 				str >> v;
 
-				boost::function<void(frame_base&)> f = 
-					boost::bind(&var<double>, boost::bind(&make_frame<double>, v, _1, o.f.ip),  &o);
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&var<double>, boost::bind(&make_frame<double>, v, _1),  _2);
 
 				c.push_back(f); 
 			}
@@ -185,8 +256,8 @@ struct op {
 				std::stringstream refstr(v.substr(1));
 				refstr >> sp;
 
-				boost::function<void(frame_base&)> f = 
-					boost::bind(&print, _1, sp, &o);
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&print, _1, sp, _2);
 
 				c.push_back(f); 
 			}
@@ -202,8 +273,8 @@ struct op {
 				std::stringstream refstr2(ssp2.substr(1));
 				refstr2 >> sp2;
 
-				boost::function<void(frame_base&)> f = 
-					boost::bind(&assign, _1, sp1, sp2, &o);
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&assign, _1, sp1, sp2, _2);
 
 				c.push_back(f); 
 			}
@@ -222,25 +293,26 @@ struct op {
 				std::stringstream refstr3(ssp3.substr(1));
 				refstr3 >> sp3;
 
-				boost::function<void(frame_base&)> f = 
-					boost::bind(&plus, _1, sp1, sp2, sp3, &o);
+				boost::function<void(frame_base&, op*)> f = 
+					boost::bind(&plus, _1, sp1, sp2, sp3, _2);
 
 				c.push_back(f); 
 			}
+			if (true == in_function) ++ips_in_function;
 		}
 		// std::cout << "size: " << c.size() << std::endl;
-		o.code = c;
+		o.run();
 		return o;
-
 	}
 
-	void run(frame_base &f) {
-		// std::cout << "void run(frame_base &f) " << f.p << " " << (code.end() - ip) << std::endl;
+	void run(frame_base &fb, code_vector::const_iterator end) {
+	   std::cout << "void run(frame_base &f) " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
 		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
-		while(code.end() != ip) {
+		while(end != ip) {
+			std::cout << " **** " << std::endl;
 			// Execute code at ip
-			(*ip)(f);
+			(*ip)(fb, this);
 		}
 	}
 };
@@ -254,31 +326,58 @@ frame_base *get(frame_base *top, int sp) {
 	return top;
 }
 
+inline void alter_ip(frame_base &f, int sp1, op *o) {
+	o->ip += sp1;
+	std::cout << "alter_ip: " << sp1 << std::endl;
+}
+
+inline void call(frame_base &f, int sp1, op *o) {
+	std::cout << "call" << std::endl;
+	// (*get(&f, sp1))();
+	//op o2 = *o;
+	//o2.code = o->code;
+	frame<function> *fr = 
+		dynamic_cast<frame<function> *>(get(&f, sp1));
+
+	if (0 == fr) 
+		throw std::runtime_error("not a function");
+
+	code_vector::const_iterator  ip = o->ip;
+	o->ip = fr->t.first;
+
+	o->run(*fr, fr->t.second);
+	o->ip = ++ip;
+}
+
+
 inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o) {
 	++(o->ip);
 
+	std::cout << " + " << std::endl;
 	get(&f, sp2)->plus(get(&f, sp3), get(&f, sp1));
 }
 
 
 inline void assign(frame_base &f, int sp1, int sp2, op *o) {
 	++(o->ip);
-	
+	std::cout << " = " << std::endl;
 	get(&f, sp1)->assign(get(&f, sp2));
 }
 
 
 inline void print(frame_base &f, int sp, op *o) {
 	++(o->ip);
-
+	std::cout << " print " << std::endl;
 	get(&f, sp)->print();
 }
 
 template<class T>
 inline void var(frame<T> f, op *o) {
+	//f.ip = o->ip;
+
 	++(o->ip);
 
-	o->run(f);
+	o->run(f, o->code->end());
 }
 
 

@@ -1,8 +1,8 @@
 # push some variables on the stack
-int -4
-int 5
-int 8
-double 6.3
+int 0
+int 0
+int 1
+double 3.0
 
 # do some stuff. $N is the N-th element from the top of the stack
 = $2 $1
@@ -10,7 +10,7 @@ double 6.3
 # this would throw an exception as $0 is a double and $1 is an int
 # = $0 $1
 
-+ $2 $2 $3
++ $1 $2 $2
 
 # print results 
 print $0
@@ -20,10 +20,15 @@ print $3
 
 # define a function
 <<<
-+ $1 $2 $3
+# + $2 $3 $4
+print $0
+print $0
+print $0
 >>>
 
-print $3
+print $1
 
 # call function which is the topmost element on the stack
-do $0
+call $0
+call $0
+call $0

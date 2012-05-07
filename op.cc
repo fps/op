@@ -25,5 +25,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	op::op op = op::op::compile(code);
-	op.run();
+	//op.run();
 }

@@ -1,2 +1,2 @@
-op: op.cc op.h
-	g++ -O3 -funroll-loops -march=native -o op op.cc
+op: op.cc op.h makefile
+	g++ -Wall -g  -o op op.cc
