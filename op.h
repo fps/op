@@ -189,9 +189,9 @@ struct op {
 				in_function = false;
 				--ips_in_function;						
 
-				function fn = std::make_pair((c.end() + 2) - ips_in_function, c.end() + 2);
+				function fn = std::make_pair((c.end()) - ips_in_function, c.end());
 
-				std::cout << c.end() - fn.first << " " << c.end() - fn.second << std::endl;
+				std::cout << c.end() - fn.first << " " << c.end() - fn.second <<  " " << c.end() - c.begin() << std::endl;
 
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(
@@ -341,6 +341,8 @@ inline void call(frame_base &f, int sp1, op *o) {
 
 	if (0 == fr) 
 		throw std::runtime_error("not a function");
+
+	std::cout << o->code->end() - fr->t.first << std::endl;
 
 	code_vector::const_iterator  ip = o->ip;
 	o->ip = fr->t.first;
