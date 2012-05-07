@@ -193,7 +193,7 @@ struct op {
 				if (false == in_function) throw std::runtime_error("not in function scope");
 				in_function = false;			
 
-				function fn = std::make_pair(ips_function_start, ips_in_compile);
+				function fn = std::make_pair(ips_function_start + 2, ips_in_compile + 2);
 
 				std::cout << fn.first << " " <<  fn.second << std::endl;
 
@@ -213,6 +213,7 @@ struct op {
 					_2);
 
 				c.insert(c.begin() + ips_function_start, f);
+				++(++ips_in_compile);
 			}
 
 			if (token == "call") {
@@ -226,7 +227,8 @@ struct op {
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(&call, _1, sp1, _2);
 
-				c.push_back(f);				
+				c.push_back(f);
+				++ips_in_compile;		
 			}
 
 			if (token == "int") {
@@ -237,6 +239,7 @@ struct op {
 					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1),  _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "double") {
@@ -247,6 +250,7 @@ struct op {
 					boost::bind(&var<double>, boost::bind(&make_frame<double>, v, _1),  _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "print") {
@@ -261,6 +265,7 @@ struct op {
 					boost::bind(&print, _1, sp, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "=") {
@@ -278,6 +283,7 @@ struct op {
 					boost::bind(&assign, _1, sp1, sp2, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "+") {
@@ -298,9 +304,10 @@ struct op {
 					boost::bind(&plus, _1, sp1, sp2, sp3, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
-			++ips_in_compile;
+
 		}
 		// std::cout << "size: " << c.size() << std::endl;
 		o.run();
