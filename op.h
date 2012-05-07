@@ -13,6 +13,12 @@
 
 #include <sys/time.h>
 
+#ifndef NODEBUG
+#define OP_DBG(x) { std::cout << x << std::endl; }
+#else
+#define OP_DBG(x) { }
+#endif
+
 namespace op {
 
 struct frame_base;
@@ -29,7 +35,7 @@ struct frame_base {
 	: 
 		p(p)
 	{
-		//std::cout << "frame_base()" << std::endl;
+		//std::cout << "frame_base()" )
 	}
 
 	frame_base *p;
@@ -37,17 +43,17 @@ struct frame_base {
 	virtual ~frame_base() { }
 
 	virtual void print() { 
-		std::cout << "frame_base::print()" << std::endl; 
+		OP_DBG("frame_base::print()") 
 		throw std::runtime_error("!!!!!");
 	}
 
 	virtual void assign(frame_base *o) { 
-		std::cout << "frame_base::assign()" << std::endl;
+		OP_DBG("frame_base::assign()" )
 		throw std::runtime_error("!!!!!");
 	}
 
 	virtual void plus(frame_base *o, frame_base *res) {
-		std::cout << "frame_base::plus()" << std::endl;
+		OP_DBG("frame_base::plus()" )
 		throw std::runtime_error("!!!!!");
 	}
 
@@ -64,7 +70,7 @@ struct frame : frame_base {
 	: 
 		frame_base(p) , t(t)
 	{
-		//std::cout << "frame()" << std::endl;
+		//OP_DBG("frame()" )
 	}
 
 	T t;
@@ -74,7 +80,7 @@ struct frame : frame_base {
 	}
 
 	virtual void assign(frame_base *o) {
-		// std::cout << "frame<T>::assign()" << std::endl;
+		// OP_DBG("frame<T>::assign()" )
 		frame<T> *co = dynamic_cast<frame<T> *>(o);
 
 		if (0 == co) throw std::runtime_error("type mismatch");
@@ -96,7 +102,7 @@ struct frame : frame_base {
 
 template<>
 void frame<function>::print() {
-  std::cout << "a function : " << t.first << " " << t.second << std::endl;
+  OP_DBG("a function : " << t.first << " " << t.second )
   throw std::runtime_error("SAY WHAT!!!!!");
 }
 
@@ -148,7 +154,7 @@ struct op {
 		struct timeval tv1;
 		gettimeofday(&tv1, 0);
 
-		// std::cout << "run(const code_vector &c) " << std::endl;
+		// OP_DBG("run(const code_vector &c) " )
 		f = frame<int>(0, 0);
 		ip = code->begin();
 		run(f, code->end());
@@ -177,7 +183,7 @@ struct op {
 		unsigned int ips_in_compile = 0;
 
 		for (string_vector::const_iterator it = s.begin(); it != s.end(); ++it) {
-			// std::cout << "--- " << *it << std::endl;
+			// OP_DBG("--- " << *it )
 			std::stringstream str(*it);
 			std::string token;
 			str >> token;
@@ -185,17 +191,17 @@ struct op {
 			if (token == "<<<") {
 				in_function = true;			
 				ips_function_start = ips_in_compile;				
-				std::cout << token << std::endl;
+				OP_DBG(token )
 			}
 
 			if (token == ">>>") {
-				std::cout << token << " " << ips_in_compile << std::endl;
+				OP_DBG(token << " " << ips_in_compile )
 				if (false == in_function) throw std::runtime_error("not in function scope");
 				in_function = false;			
 
 				function fn = std::make_pair(ips_function_start + 2, ips_in_compile + 2);
 
-				std::cout << fn.first << " " <<  fn.second << std::endl;
+				OP_DBG(fn.first << " " <<  fn.second )
 
 				boost::function<void(frame_base&,op*)> f2 = 
 				  boost::bind(&alter_ip, _1, 1 + (ips_in_compile - ips_function_start), _2); 
@@ -309,21 +315,21 @@ struct op {
 
 
 		}
-		// std::cout << "size: " << c.size() << std::endl;
+		// OP_DBG("size: " << c.size() )
 		o.run();
 		return o;
 	}
 
 	void run(frame_base &fb, code_vector::const_iterator end) {
-	  std::cout << "<<< void run(frame_base &f) " << this << " " << ip - code->begin() << " " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
-		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
+	  OP_DBG("<<< void run(frame_base &f) " << this << " " << ip - code->begin() << " " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip )
+		//if (code.end() == ip) { OP_DBG("done" ) return; }
 
 		while(end != ip) {
-		  std::cout << " **** " << " " << ip - code->begin() << std::endl;
+		  OP_DBG(" **** " << " " << ip - code->begin() )
 			// Execute code at ip
 			(*ip)(fb, this);
 		}
-		std::cout << ">>> run done well" << std::endl;
+		OP_DBG(">>> run done well" )
 	}
 };
 
@@ -338,11 +344,11 @@ frame_base *get(frame_base *top, int sp) {
 
 inline void alter_ip(frame_base &f, int sp1, op *o) {
 	o->ip += sp1;
-	std::cout << "alter_ip: " << sp1 << std::endl;
+	OP_DBG("alter_ip: " << sp1 )
 }
 
 inline void call(frame_base &f, int sp1, op *o) {
-	std::cout << "call" << std::endl;
+	OP_DBG("call" )
 	// (*get(&f, sp1))();
 	//op o2 = *o;
 	//o2.code = o->code;
@@ -364,21 +370,21 @@ inline void call(frame_base &f, int sp1, op *o) {
 inline void plus(frame_base &f, int sp1, int sp2, int sp3, op *o) {
 	++(o->ip);
 
-	std::cout << " + " << std::endl;
+	OP_DBG(" + " )
 	get(&f, sp2)->plus(get(&f, sp3), get(&f, sp1));
 }
 
 
 inline void assign(frame_base &f, int sp1, int sp2, op *o) {
 	++(o->ip);
-	std::cout << " = " << std::endl;
+	OP_DBG(" = " )
 	get(&f, sp1)->assign(get(&f, sp2));
 }
 
 
 inline void print(frame_base &f, int sp, op *o) {
 	++(o->ip);
-	std::cout << " print " << std::endl;
+	OP_DBG(" print ")
 	get(&f, sp)->print();
 }
 
