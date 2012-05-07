@@ -383,7 +383,14 @@ inline void alter_ip(frame_base &f, int sp1, op *o) {
 
 
 inline void iff(frame_base &f, int sp1, int sp2, int sp3, op *o) {
+	OP_DBG("iff")
+	frame<bool> *fbool = dynamic_cast<frame<bool> *>(get(&f, sp1));
 
+	if (fbool) {
+		call(f, sp2, o);
+	} else {
+		call(f, sp3, o);
+	}
 }
 
 inline void call(frame_base &f, int sp1, op *o) {
