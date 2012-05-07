@@ -274,6 +274,8 @@ struct op {
 			if (token == "bool") {
 				bool v;
 				str >> v;
+
+				OP_DBG("boolean is: " << v)
 				
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(&var<bool>, boost::bind(&make_frame<bool>, v, _1),  _2);
@@ -386,9 +388,13 @@ inline void iff(frame_base &f, int sp1, int sp2, int sp3, op *o) {
 	OP_DBG("iff")
 	frame<bool> *fbool = dynamic_cast<frame<bool> *>(get(&f, sp1));
 
-	if (fbool) {
+	if (0 == fbool) throw std::runtime_error("not a boolean");
+
+	if (true == fbool->t) {
+		OP_DBG("first " << sp2)
 		call(f, sp2, o);
 	} else {
+		OP_DBG("second" << sp3)
 		call(f, sp3, o);
 	}
 }
