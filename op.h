@@ -198,9 +198,9 @@ struct op {
 				std::cout << fn.first << " " <<  fn.second << std::endl;
 
 				boost::function<void(frame_base&,op*)> f2 = 
-					boost::bind(&alter_ip, _1, ips_in_compile - ips_function_start, _2); 
+				  boost::bind(&alter_ip, _1, 1 + (ips_in_compile - ips_function_start), _2); 
 
-				c.insert(c.begin() + ips_in_compile, f2);
+				c.insert(c.begin() + ips_function_start, f2);
 
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(
@@ -315,14 +315,15 @@ struct op {
 	}
 
 	void run(frame_base &fb, code_vector::const_iterator end) {
-	  std::cout << "void run(frame_base &f) " << this << " " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
+	  std::cout << "<<< void run(frame_base &f) " << this << " " << ip - code->begin() << " " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
 		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
 		while(end != ip) {
-			std::cout << " **** " << std::endl;
+		  std::cout << " **** " << " " << ip - code->begin() << std::endl;
 			// Execute code at ip
 			(*ip)(fb, this);
 		}
+		std::cout << ">>> run done well" << std::endl;
 	}
 };
 
@@ -354,7 +355,7 @@ inline void call(frame_base &f, int sp1, op *o) {
 	code_vector::const_iterator  ip = o->ip;
 	o->ip = o->code->begin() + fr->t.first;
 
-	o->run(o->f, o->code->begin() + fr->t.second);
+	o->run(*fr, o->code->begin() + fr->t.second);
 	o->ip = ++ip;
 }
 
