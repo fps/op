@@ -1,2 +1,8 @@
 op: op.cc op.h makefile
-	g++ -Wall -g  -o op op.cc
+	g++ -I /opt/local/include/ -Wall -g  -o op op.cc
+
+
+.PHONY: clean
+
+clean:
+	rm -rf op

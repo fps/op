@@ -21,7 +21,7 @@ struct op;
 
 typedef std::vector<std::string> string_vector;
 typedef std::vector<boost::function2<void, frame_base&, op*> > code_vector;
-typedef std::pair<code_vector::const_iterator, code_vector::const_iterator> function;
+typedef std::pair<unsigned int, unsigned int> function;
 
 
 struct frame_base {
@@ -96,8 +96,10 @@ struct frame : frame_base {
 
 template<>
 void frame<function>::print() {
-		throw std::runtime_error("SAY WHAT!!!!!");
+  std::cout << "a function : " << t.first << " " << t.second << std::endl;
+  throw std::runtime_error("SAY WHAT!!!!!");
 }
+
 template<>
 void frame<function>::plus(frame_base *o, frame_base *res) {
 
@@ -170,7 +172,9 @@ struct op {
 		code_vector &c = *(o.code);
 
 		bool in_function = false;
-		int ips_in_function = 0;
+		int ips_function_start = 0;
+
+		unsigned int ips_in_compile = 0;
 
 		for (string_vector::const_iterator it = s.begin(); it != s.end(); ++it) {
 			// std::cout << "--- " << *it << std::endl;
@@ -180,18 +184,23 @@ struct op {
 
 			if (token == "<<<") {
 				in_function = true;			
-				ips_in_function = 0;				
+				ips_function_start = ips_in_compile;				
 				std::cout << token << std::endl;
 			}
 
 			if (token == ">>>") {
-				std::cout << token << " " << ips_in_function << std::endl;
-				in_function = false;
-				--ips_in_function;						
+				std::cout << token << " " << ips_in_compile << std::endl;
+				if (false == in_function) throw std::runtime_error("not in function scope");
+				in_function = false;			
 
-				function fn = std::make_pair((c.end()) - ips_in_function, c.end());
+				function fn = std::make_pair(ips_function_start + 2, ips_in_compile + 2);
 
-				std::cout << c.end() - fn.first << " " << c.end() - fn.second <<  " " << c.end() - c.begin() << std::endl;
+				std::cout << fn.first << " " <<  fn.second << std::endl;
+
+				boost::function<void(frame_base&,op*)> f2 = 
+				  boost::bind(&alter_ip, _1, 1 + (ips_in_compile - ips_function_start), _2); 
+
+				c.insert(c.begin() + ips_function_start, f2);
 
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(
@@ -202,16 +211,9 @@ struct op {
 							_1
 						),  
 					_2);
-//					boost::bind(&call, _1, 0, &o);
 
-				c.insert((c.end() - (ips_in_function)), f);
-
-				boost::function<void(frame_base&,op*)> f2 = 
-					boost::bind(&alter_ip, _1, ips_in_function + 1, _2); 
-
-				c.insert((c.end() - (ips_in_function)), f2);
-
-				std::cout << c.end() - fn.first << " " << c.end() - fn.second << std::endl;
+				c.insert(c.begin() + ips_function_start, f);
+				++(++ips_in_compile);
 			}
 
 			if (token == "call") {
@@ -225,7 +227,8 @@ struct op {
 				boost::function<void(frame_base&, op*)> f = 
 					boost::bind(&call, _1, sp1, _2);
 
-				c.push_back(f);				
+				c.push_back(f);
+				++ips_in_compile;		
 			}
 
 			if (token == "int") {
@@ -236,6 +239,7 @@ struct op {
 					boost::bind(&var<int>, boost::bind(&make_frame<int>, v, _1),  _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "double") {
@@ -246,6 +250,7 @@ struct op {
 					boost::bind(&var<double>, boost::bind(&make_frame<double>, v, _1),  _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "print") {
@@ -260,6 +265,7 @@ struct op {
 					boost::bind(&print, _1, sp, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "=") {
@@ -277,6 +283,7 @@ struct op {
 					boost::bind(&assign, _1, sp1, sp2, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
 
 			if (token == "+") {
@@ -297,8 +304,10 @@ struct op {
 					boost::bind(&plus, _1, sp1, sp2, sp3, _2);
 
 				c.push_back(f); 
+				++ips_in_compile;
 			}
-			if (true == in_function) ++ips_in_function;
+
+
 		}
 		// std::cout << "size: " << c.size() << std::endl;
 		o.run();
@@ -306,14 +315,15 @@ struct op {
 	}
 
 	void run(frame_base &fb, code_vector::const_iterator end) {
-	   std::cout << "void run(frame_base &f) " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
+	  std::cout << "<<< void run(frame_base &f) " << this << " " << ip - code->begin() << " " << ip - code->begin() << " " << fb.p << " " << (end - ip) << " " << code->end() - ip << std::endl;
 		//if (code.end() == ip) { std::cout << "done" << std::endl; return; }
 
 		while(end != ip) {
-			std::cout << " **** " << std::endl;
+		  std::cout << " **** " << " " << ip - code->begin() << std::endl;
 			// Execute code at ip
 			(*ip)(fb, this);
 		}
+		std::cout << ">>> run done well" << std::endl;
 	}
 };
 
@@ -342,12 +352,11 @@ inline void call(frame_base &f, int sp1, op *o) {
 	if (0 == fr) 
 		throw std::runtime_error("not a function");
 
-	std::cout << o->code->end() - fr->t.first << std::endl;
 
 	code_vector::const_iterator  ip = o->ip;
-	o->ip = fr->t.first;
+	o->ip = o->code->begin() + fr->t.first;
 
-	o->run(*fr, fr->t.second);
+	o->run(*fr, o->code->begin() + fr->t.second);
 	o->ip = ++ip;
 }
 
