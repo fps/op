@@ -1,0 +1,39 @@
+(
+	; type of x y and z are int. they get pushed
+	; on the stack. 
+	(= (x y z) (1 2 3))
+
+	(= (int k) 5)
+
+	(= ((int l m) (double n)) (0 1 2.5))
+
+	; l is a pair of ints
+	(= l (int int))
+
+	(= m (int ())
+	; type of f is (int (double double))
+	(= f ())
+)
+
+(
+	(0 	x)
+	(0.0	y)
+	('c'  c)
+	
+(
+	x 0
+	y 0.4
+
+	z (
+		m 0.0
+		n false
+	) 
+
+	f '(
+
+
+[
+	(int bool float)
+
+//prog(decl<int>("a", 
+

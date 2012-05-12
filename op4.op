@@ -1,0 +1,55 @@
+int
+	x
+	5
+
+(= (int x) 5)
+
+func
+	foo
+		int
+			x
+		double
+			y
+			z
+	int
+		m
+			=
+				/
+					4
+					x
+
+	return
+				x
+			*
+						y
+					+
+						z
+					
+(func (foo (int x) (double y z)) (int (m (= (/ 4 x)))) (return(* x (+ y z))))
+
+func
+	foo (int x) (double y z)
+
+	int (m (= (/ 4 x)))
+
+	return (* (x (+ y z)))
+
+data
+	bar
+		
+func
+	foo
+		x y z
+	m
+		= 
+				4
+			/	x
+
+	p
+		=
+				1
+			+	4
+			+	5
+	return
+		foo
+			 m v p
